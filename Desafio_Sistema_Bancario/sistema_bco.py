@@ -1,5 +1,5 @@
 import textwrap
-from abc import ABC, abstractclassmethod, abstractproperty
+from abc import ABC, abstractclassmethod, abstractmethod, abstractproperty
 from datetime import datetime
 
 
@@ -152,6 +152,15 @@ class Transacao(ABC):
     def registrar(self, conta):
         pass
 
+    def executar(self, conta):
+        sucesso_transacao = self.efetuar_transacao(conta)
+        if sucesso_transacao:
+            conta.historico.adicionar_transacao(self)
+
+    @abstractmethod
+    def efetuar_transacao(self, conta):
+        pass
+
 
 class Saque(Transacao):
     def __init__(self, valor):
@@ -167,6 +176,9 @@ class Saque(Transacao):
         if sucesso_transacao:
             conta.historico.adicionar_transacao(self)
 
+    def efetuar_transacao(self, conta):
+        return conta.sacar(self.valor)
+
 
 class Deposito(Transacao):
     def __init__(self, valor):
@@ -181,6 +193,9 @@ class Deposito(Transacao):
 
         if sucesso_transacao:
             conta.historico.adicionar_transacao(self)
+
+    def efetuar_transacao(self, conta):
+        return conta.depositar(self.valor)
 
 
 def menu():
@@ -212,8 +227,7 @@ def recuperar_conta_cliente(cliente):
     # FIXME: não permite cliente escolher a conta
     return cliente.contas[0]
 
-
-def depositar(clientes):
+def depositar_sacar(clientes, opcao):
     cpf = input('Informe o CPF do cliente: ')
     cliente = filtrar_cliente(cpf, clientes)
 
@@ -222,31 +236,25 @@ def depositar(clientes):
         return
 
     valor = float(input('Informe o valor do depósito: '))
-    transacao = Deposito(valor)
+    
+    if opcao == 'Depositar':
+        transacao = Deposito(valor)
+
+    elif opcao == 'Sacar':
+        transacao = Saque(valor)
 
     conta = recuperar_conta_cliente(cliente)
     if not conta:
         return
 
     cliente.realizar_transacao(conta, transacao)
+
+def depositar(clientes):
+    depositar_sacar(clientes, 'Depositar')
 
 
 def sacar(clientes):
-    cpf = input('Informe o CPF do cliente: ')
-    cliente = filtrar_cliente(cpf, clientes)
-
-    if not cliente:
-        print('\n@@@ Cliente não encontrado! @@@')
-        return
-
-    valor = float(input('Informe o valor do saque: '))
-    transacao = Saque(valor)
-
-    conta = recuperar_conta_cliente(cliente)
-    if not conta:
-        return
-
-    cliente.realizar_transacao(conta, transacao)
+    depositar_sacar(clientes, 'Sacar')
 
 
 def exibir_extrato(clientes):
